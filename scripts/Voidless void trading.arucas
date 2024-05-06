@@ -1,0 +1,109 @@
+import * from Minecraft;
+import MaterialUtils from minecraft.MinecraftUtils;
+
+client = MinecraftClient.getClient();
+player = Player.get();
+world = client.getWorld();
+
+fun getButtonPos(player, button_type) {
+    playerPos = player.getPos();
+    blocks = player.getWorld().getBlocks(playerPos.subtract(2, 2, 2), playerPos.add(2, 2, 2));
+    foreach (block : blocks) {
+        if (block.getId() == button_type) {
+            return block.getPos();
+        }
+    }
+    return null;
+}
+
+fun pressButton(player, button_type) {
+    buttonPos = getButtonPos(player, button_type);
+    if (buttonPos != null) {
+        player.interactBlock(buttonPos, "up");
+    }
+}
+
+fun interactVillager(player, villager) {
+    player.interactWithEntity(villager);
+    entity = player.getLookingAtEntity();
+}
+
+fun playerHasItems(player, itemStack) {
+    if (itemStack.getMaterial() != Material.AIR) {
+        slots = player.getAllSlotsFor(itemStack);
+        count = itemStack.getCount();
+        total = 0;
+        foreach (slot : slots) {
+            item = player.getItemForSlot(slot);
+            total = total + item.getCount();
+        }
+        if (total < count) {
+            print("Needed %s but had %s of %s".format(count, total, itemStack));
+            return false;
+        }
+    }
+    return true;
+}
+
+fun trade(player, villager) {
+    currentScreen = player.getCurrentScreen();
+
+    if (!currentScreen.instanceOf(MerchantScreen.type)) {
+        return;
+    }
+    tradeList = currentScreen.getTradeList();
+    isMatch = false;
+
+    for (i = 0; i < len(tradeList); i++) {
+        actualTrade = tradeList.get(i);
+        if (actualTrade.getUses() >= actualTrade.getMaxUses()) {
+            continue;
+        }
+        // Comprueba si la oferta de comercio requiere hierro y ofrece esmeraldas
+        if (actualTrade.getFirstBuyItem().getMaterial().toString() == "iron_ingot" && actualTrade.getSellItem().getMaterial().toString() == "emerald") {
+            isMatch = true;
+            first = actualTrade.getAdjustedFirstBuyItem();
+            second = actualTrade.getSecondBuyItem();
+
+            startUses = actualTrade.getUses();
+            // We trade until we can't
+            for (j = 0; actualTrade.getUses() < actualTrade.getMaxUses(); j++) {
+                // If the player cannot afford the trade we skip it
+                if (!playerHasItems(player, first) || !playerHasItems(player, second)) {
+                    break;
+                }
+                // If the player has no space in the inventory we skip
+                if (player.getSlotFor(Material.AIR) == null) {
+                    print("inventory full");
+                    break;
+                }
+
+                if (j > 10) {
+                    // This is a failsafe if something goes very wrong
+                    print("Tried to trade too many times");
+                    stop();
+                }
+                currentScreen.tradeIndex(i);
+                sleep(50);
+            }
+        }
+    }
+}
+
+while (true) {
+    entity = player.getLookingAtEntity();
+    buttonPos = getButtonPos(player, "oak_button");
+
+    if (entity != null && entity.getId() == "villager") {
+        pressButton(player, "spruce_button");
+        interactVillager(player, entity);
+    }
+
+    if (buttonPos != null) {
+        sleep(50);
+        trade(player, entity);
+        player.closeScreen();
+        pressButton(player, "oak_button");
+    }
+    sleep(50);
+}
