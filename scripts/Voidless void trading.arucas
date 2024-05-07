@@ -45,7 +45,7 @@ fun playerHasItems(player, itemStack) {
     return true;
 }
 
-fun trade(player, villager) {
+fun trade(player, villager, sell, buy) {
     currentScreen = player.getCurrentScreen();
 
     if (!currentScreen.instanceOf(MerchantScreen.type)) {
@@ -59,27 +59,23 @@ fun trade(player, villager) {
         if (actualTrade.getUses() >= actualTrade.getMaxUses()) {
             continue;
         }
-        // Comprueba si la oferta de comercio requiere hierro y ofrece esmeraldas
-        if (actualTrade.getFirstBuyItem().getMaterial().toString() == "iron_ingot" && actualTrade.getSellItem().getMaterial().toString() == "emerald") {
+        if (actualTrade.getFirstBuyItem().getMaterial().toString() == sell && actualTrade.getSellItem().getMaterial().toString() == buy) {
             isMatch = true;
             first = actualTrade.getAdjustedFirstBuyItem();
             second = actualTrade.getSecondBuyItem();
 
             startUses = actualTrade.getUses();
-            // We trade until we can't
             for (j = 0; actualTrade.getUses() < actualTrade.getMaxUses(); j++) {
-                // If the player cannot afford the trade we skip it
                 if (!playerHasItems(player, first) || !playerHasItems(player, second)) {
                     break;
                 }
-                // If the player has no space in the inventory we skip
                 if (player.getSlotFor(Material.AIR) == null) {
                     print("inventory full");
                     break;
                 }
 
                 if (j > 10) {
-                    // This is a failsafe if something goes very wrong
+                    // Failsafe
                     print("Tried to trade too many times");
                     stop();
                 }
@@ -101,7 +97,8 @@ while (true) {
 
     if (buttonPos != null) {
         sleep(50);
-        trade(player, entity);
+        trade(player, entity, "book", "emerald");
+        //trade(player, entity, "emerald", "bookshelf");
         player.closeScreen();
         pressButton(player, "oak_button");
     }
